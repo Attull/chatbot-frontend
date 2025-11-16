@@ -35,7 +35,7 @@ export default function Tickets({ setToast }) {
 
   async function loadTickets() {
     try {
-      const data = await apiRequest("/tickets/mine");
+      const data = await apiRequest("http://localhost:5000/tickets/mine");
       setTickets(data);
     } catch (e) {
       setToast(e.message);

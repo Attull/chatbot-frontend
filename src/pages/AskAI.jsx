@@ -14,7 +14,7 @@ export default function AskAI({ setToast }) {
     setMessages((msgs) => [...msgs, { role: "user", text: q }]);
 
     try {
-      const res = await apiRequest("/ai/chat", {
+      const res = await apiRequest("http://localhost:5000/ai/chat", {
         method: "POST",
         body: JSON.stringify({ query: q }),
       });

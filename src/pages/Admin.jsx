@@ -1,95 +1,51 @@
-import React, { useEffect, useState } from "react";
-import { apiRequest } from "../api";
+import React, { useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
 export default function Admin({ setToast }) {
-  const [form, setForm] = useState({ title: "", body: "", tags: "" });
-  const [articles, setArticles] = useState([]);
+  const [pdfFile, setPdfFile] = useState(null);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  async function uploadPDF() {
+    if (!pdfFile) {
+      setToast("Please select a PDF file");
+      return;
+    }
 
-  async function loadArticles() {
-    const data = await apiRequest("/articles");
-    setArticles(data.items);
-  }
+    const formData = new FormData();
+    formData.append("pdf", pdfFile);
 
-  async function createArticle() {
     try {
-      const payload = {
-        title: form.title,
-        body: form.body,
-        tags: form.tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-      };
-      await apiRequest("/articles", {
+      const res = await fetch("http://localhost:5000/api/pdf/upload", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: formData,
       });
-      setToast("Article created");
-      setForm({ title: "", body: "", tags: "" });
-      loadArticles();
+
+      const data = await res.json();
+      setToast(
+        data.chunksAdded
+          ? `Ingested ${data.chunksAdded} chunks`
+          : data.message || "PDF ingestion failed..."
+      );
+      setPdfFile(null);
     } catch (e) {
-      setToast(e.message);
+      setToast("PDF upload failed");
     }
   }
-
-  async function ingest() {
-    try {
-      await apiRequest("/ai/ingest", { method: "POST" });
-      setToast("Ingest completed");
-    } catch (e) {
-      setToast(e.message);
-    }
-  }
-
-  useEffect(() => {
-    loadArticles();
-  }, []);
 
   return (
     <div>
-      <h1>Admin</h1>
+      <h1>Admin Panel</h1>
 
-      <Card title="Create / Edit Article (Mock)">
+      <Card title="Upload PDF for AI Ingestion">
         <input
-          name="title"
-          placeholder="Title"
-          value={form.title}
-          onChange={handleChange}
+          type="file"
+          accept="application/pdf"
+          onChange={(e) => setPdfFile(e.target.files[0])}
         />
-        <textarea
-          name="body"
-          placeholder="Body"
-          value={form.body}
-          onChange={handleChange}
-        />
-        <input
-          name="tags"
-          placeholder="Tags (comma-separated)"
-          value={form.tags}
-          onChange={handleChange}
-        />
-        <p>
-          <strong>Preview:</strong> {form.body.slice(0, 160)}...
-        </p>
-        <Button onClick={createArticle}>Save Article</Button>
+        <Button onClick={uploadPDF} style={{ marginTop: "10px" }}>
+          Upload & Ingest PDF
+        </Button>
       </Card>
-
-      <Button variant="secondary" onClick={ingest}>
-        Ingest Articles for AI
-      </Button>
-
-      <h2>Existing Articles</h2>
-      {articles.map((a) => (
-        <Card key={a._id} title={a.title}>
-          <p>{a.summary}</p>
-        </Card>
-      ))}
     </div>
   );
 }
